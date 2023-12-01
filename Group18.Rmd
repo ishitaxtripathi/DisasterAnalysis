@@ -1,0 +1,231 @@
+---
+title: "Group 18"
+author: "Ishita Tripathi"
+date: "2023-11-30"
+output:
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+
+```{r}
+setwd("D:/Post graduation/Semester 1/Data Analysis/Coursework/Group 18")
+```
+combine Datasets
+```{r, child=c('Asia/Asia.Rmd', 'Africa/Africa.Rmd', 'America/America.Rmd')}
+
+# combine the continents
+combined_data <- rbind(
+  transform(asia,Continent = "Asia"),
+  transform(africa, Continent = "Africa"),
+  transform(america, Continent = "Americas")
+)
+```
+Visualize the data
+```{r}
+combined_data_perc <- combined_data %>%
+  mutate(
+    Total = DataCards + Deaths + `Houses.Ruined` + Affected,
+    DataCards_perc = DataCards / Total,
+    Deaths_perc = Deaths / Total,
+    Houses_Ruined_perc = `Houses.Ruined` / Total,
+    Affected_perc = Affected / Total
+  ) %>%
+  select(Event, DataCards_perc, Deaths_perc, Houses_Ruined_perc, Affected_perc)
+
+combined_data_long <- combined_data_perc %>%
+  pivot_longer(cols = -Event, names_to = "Factor", values_to = "Percentage")
+
+threshold <- 50
+
+filtered_combined_data_long <- combined_data_long %>%
+  group_by(Event) %>%
+  summarise(Total_Percentage = sum(Percentage)) %>%
+  filter(Total_Percentage > threshold) %>%
+  inner_join(asia_long, by = "Event") %>%
+  ungroup()
+
+ggplot(filtered_combined_data_long, aes(x = "", y = Percentage, fill = Event)) +
+  geom_bar(stat = "identity", width = 1) +
+  facet_wrap(~Factor) +
+  coord_polar(theta = "y") +
+  theme_minimal() +
+  ggtitle("Event Distribution by Factor (Percentage)")
+
+```
+Parameters for modelling
+```{r}
+# Get only numeric Values
+numeric_data <- combined_data[, sapply(combined_data, is.numeric)]
+
+# find PCA
+scaled_data <- scale(numeric_data)
+pca_result <- prcomp(scaled_data, center = TRUE, scale. = TRUE)
+summary(pca_result)
+formula <- numeric_data$Deaths ~ numeric_data$DataCards + numeric_data$Deaths + numeric_data$Monetary.LossUSD + numeric_data$Event_Severity + numeric_data$Houses.Ruined + numeric_data$Affected
+  model <- lm(formula, data = numeric_data)
+
+  vif_result <- car::vif(model)
+
+  cat("\n","VIF results for Deaths", ":\n")
+  print(vif_result)
+  cat("\n")
+  
+#check for correlation matrix 
+cor_matrix <- cor(numeric_data)
+print("Correlation matrix ")
+print(cor_matrix)
+
+# splitting dataset
+set.seed(123)
+split_indices <- createDataPartition(numeric_data$Year, p = 0.7, list = FALSE)
+training_data_combined <- numeric_data[split_indices, ]
+testing_data_combined <- numeric_data[-split_indices, ]
+```
+Model 1 enet on death ~ !Event+Death - 78 % accuracy
+```{r}
+train_data <- training_data_combined
+test_data <-  testing_data_combined
+
+X_train <- as.matrix(subset(train_data, select =- c(Deaths)))
+y_train <- train_data$Deaths
+X_test <- as.matrix(subset(test_data, select = - c(Deaths)))
+y_test <- test_data$Deaths
+
+X_train_std <- scale(X_train)
+X_test_std <- scale(X_test)
+
+enet_model_combined<- cv.glmnet(X_train_std, y_train, alpha = 0.5) 
+
+best_lambda <- enet_model_combined$lambda.min
+
+y_pred <- predict(enet_model_combined, newx = X_test_std, s = best_lambda)
+
+mse <- mean((y_pred - y_test)^2)
+rsquared <- cor(y_pred, y_test)^2
+
+cat("Best Lambda:", best_lambda, "\n")
+cat("Mean Squared Error:", mse, "\n")
+cat("R-squared:", rsquared, "\n")
+```
+Visualization of model 
+```{r}
+plot(enet_model_combined)
+
+plot(y_test, y_pred, main = "Actual vs Predicted", xlab = "Actual", ylab = "Predicted")
+abline(0, 1, col = "red")
+```
+Model 2 random forest on death ~ !Event+Death  - 87 % accuracy
+```{r}
+rf_model_complex <- randomForest(
+  X_train, y_train,
+  ntree = 1000,     
+  mtry = sqrt(ncol(X_train)), 
+  max_depth = NULL
+)
+
+y_pred_rf_complex <- predict(rf_model_complex, X_test, type = "response")
+mse_rf_complex <- mean((y_pred_rf_complex - y_test)^2)
+rsquared_rf_complex <- cor(y_pred_rf_complex, y_test)^2
+
+cat("Random Forest- Mean Squared Error:", mse_rf_complex, "\n")
+cat("Random Forest - R-squared:", rsquared_rf_complex, "\n")
+
+```
+
+```{r}
+combined_data$Severity_Class <- ifelse(combined_data$Event_Severity >= mean(combined_data$Event_Severity), "High Severity", "Low Severity")
+
+year_quantiles <- quantile(combined_data$Year, probs = c(0, 1/3, 2/3, 1))
+combined_data$Temporal_Class <- cut(combined_data$Year,
+                                  breaks = year_quantiles,
+                                  labels = c("Early Period", "Mid Period", "Recent Period"),
+                                  include.lowest = TRUE)
+
+combined_data$Combined_Impact <- rowSums(subset(combined_data, select = c(Deaths, Houses.Ruined, Affected)))
+quantiles <- quantile(combined_data$Combined_Impact, probs = c(0, 0.25, 0.75, 1))
+quantiles <- unique(quantiles)
+
+labels <- c("Minimal Impact", "Moderate Impact", "Severe Impact", "Very Severe Impact")
+combined_data$Impact_Class <- cut(combined_data$Combined_Impact,
+                            breaks = quantiles,
+                            labels = labels[1:(length(quantiles) - 1)],
+                            include.lowest = TRUE)
+
+kmeans_result <- kmeans(combined_data$DataCards, centers = 4)
+combined_data$cluster_id <- factor(kmeans_result$cluster)
+cluster_means <- aggregate(combined_data$DataCards, by = list(combined_data$cluster_id), FUN = mean)
+sorted_clusters <- cluster_means[order(cluster_means$x),]
+label_mapping <- c("Most DataCards", "Moderately High DataCards", "Moderately Less DataCards", "Least DataCards")
+
+combined_data$cluster_label <- label_mapping[match(combined_data$cluster_id, sorted_clusters$Group.1)]
+```
+
+cluster 1
+```{r}
+classify_disaster <- function(severity, impact, cluster) {
+  risk_level <- character(length = length(severity))
+  
+ for (i in 1:length(severity)) {
+    if (severity[i] == "High Severity") {
+      if (impact[i] == "Severe Impact") {
+        risk_level[i] <- "Moderate-High Risk"
+      } else if (impact[i] == "Moderate Impact") {
+        risk_level[i] <- "Moderate Risk"
+      } else {
+        risk_level[i] <- "Low Risk"
+      }
+    } else if (severity[i] == "Low Severity") {
+      if (impact[i] == "Severe Impact") {
+        risk_level[i] <- "Moderate-Low Risk"
+      } else if (impact[i] == "Moderate Impact") {
+        risk_level[i] <- "Low-Moderate Risk"
+      } else {
+        risk_level[i] <- "Very Low Risk"
+      }
+    } else {
+      risk_level[i] <- "Undefined Risk"
+    }
+  }
+  
+  return(risk_level)
+} 
+
+  combined_data$Disaster_Class <- classify_disaster(
+  combined_data$Severity_Class,
+  combined_data$Impact_Class,
+  combined_data$cluster_label
+)
+
+heatmap_disaster_classes <- ggplot(combined_data, aes(x = Continent, y = Temporal_Class, fill = Disaster_Class)) +
+  geom_tile() +
+  labs(title = "Disaster Classes Across Continents by Temporal Class",
+       x = "Continent",
+       y = "Temporal Class") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+print(heatmap_disaster_classes)
+```
+cluster 2
+```{r}
+data_for_clustering <- combined_data[, c("Year", "Deaths", "Monetary.LossUSD", "Affected")]
+
+scaled_data <- scale(data_for_clustering)
+
+set.seed(123) 
+clara_output <- clara(scaled_data, k = 5, samples = 500)
+
+colors <- rainbow(length(unique(clara_output$clustering)))
+
+scaled_data_with_clusters <- cbind(scaled_data, Cluster = clara_output$clustering)
+
+pairs(scaled_data_with_clusters[, -ncol(scaled_data_with_clusters)], 
+      col = colors[clara_output$clustering], pch = 19)
+
+legend("topright", legend = unique(clara_output$clustering), fill = colors, title = "Clusters")
+```
+

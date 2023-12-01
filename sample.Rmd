@@ -1,0 +1,568 @@
+---
+title: "Group18"
+author: "Continent- Template"
+date: "2023-11-09"
+output: pdf_document
+---
+
+```{r setup, include = FALSE, purl = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+Directory
+```{r}
+setwd("")
+```
+Libraries
+```{r}
+# libraries
+library(dplyr) # for select function
+library(tidyr)  # pivot longer function
+library(ggplot2) # for plotting
+library(car) # the vif function
+library(glmnet) # for coffee regression
+library(caret) # for spliting
+library(cluster) # for clara
+```
+Raw Data Reading
+```{r}
+country <- read.csv("country.csv",header=TRUE,na.strings=c(""))
+# Strip leading/trailing spaces from column names
+colnames(country) <- gsub("^\\s+|\\s+$", "", colnames(country))
+
+```
+Data PreProcessing: Missing Values, Duplicate Values
+```{r}
+#Missing values
+#Finding missing_by_column_country  <- colSums(is.na(country))
+print("Total Missing Values: ")
+print(paste("Country: ",sum(is.na(country))))
+```
+
+```{r}
+#Missing values
+#Finding missing_by_column_country  <- colSums(is.na(country))
+
+# If your missing values are less than 10 % of your data we can omit them          
+country <- na.omit(country, cols = c('Column 1'))
+
+```
+
+```{r}
+print("Checking Total Missing Values: ")
+print(paste("Country: ",sum(is.na(country))))
+```
+
+```{r}
+print("Total Duplicate values")
+print(paste("Country: ", sum(duplicated(country))))
+```
+Text cleaning
+```{r}
+
+country$Event <- toupper(country$Event)
+```
+
+```{r}
+
+unique_events <- unique(country$Event)
+
+translation_dict <- c(
+  # traslate word dictionary
+)
+translate_mexican_to_english <- function(text) {
+  cleaned_text <- toupper(trimws(text))  
+  translated_text <- ifelse(cleaned_text %in% names(translation_dict), translation_dict[[cleaned_text]], text)
+  return(translated_text)
+}
+
+country$Event <- sapply(country$Event, translate_mexican_to_english)
+
+
+```
+Reducing dimention
+Case 1
+```{r}
+
+# reducing the dimensions of our dataframe by combining 6 columns into 3
+country$Houses.Ruined <-country$Houses.Destroyed + country$Houses.Damaged
+country$Affected <-country$Directly.affected + country$Indirectly.Affected
+
+country$Monetary.LossUSD<-country$Losses..USD + country$Losses..Local * (0.035)
+country$Monetary.LossUSD <- as.integer(country$Monetary.LossUSD)
+
+country = select(country, -5:-10)
+head(country)
+summary(country)
+
+
+```
+Case 2
+```{r}
+# same as Case 2 but setting a threshold at e9 and setting outliers there.
+country$Houses.Ruined <-country$Houses.Destroyed + country$Houses.Damaged
+country$Affected <-country$Directly.affected + country$Indirectly.Affected
+
+country$Monetary.LossUSD<-country$Losses..USD + country$Losses..Local * (0.035)
+country$Monetary.LossUSD <- as.integer(country$Monetary.LossUSD)
+country$Monetary.LossUSD[is.na(country$Monetary.LossUSD)] <-  max(country$Monetary.LossUSD, na.rm = TRUE)
+
+country = select(country, -5:-10)
+head(country)
+summary(country)
+
+turkey$Monetary.LossUSD[is.na(turkey$Monetary.LossUSD)] <-  max(turkey$Monetary.LossUSD, na.rm = TRUE)
+```
+Feature 1 
+```{r}
+add_Event_Severity <- function(data) {
+  # Calculate a metric representing the relationship between DataCards and Deaths
+  data$Event_Severity <- data$Deaths / data$DataCards
+  
+  # Adjust the values based on the trends observed in different countries
+  a_countries <- c("turkey", "vietnam", "pakistan")
+  b_countries <- c("yemen", "srilanka")
+  
+  # Adjustments for countries following the a trend
+  for (country in a_countries) {
+    data$Event_Severity[data$Country == country & data$Event_Severity > 1] <- 1
+    data$Event_Severity[data$Country == country & data$Event_Severity < 0.5] <- 0.5
+  }
+  
+  # Adjustments for countries following the b trend
+  for (country in b_countries) {
+
+    data$Event_Severity[data$Country == country & data$Event_Severity > 2] <- 2
+    data$Event_Severity[data$Country == country & data$Event_Severity < 1] <- 1
+  }
+  # Convert Event_Severity to integer values (multiply by 100 and round)
+  data$Event_Severity <- round(data$Event_Severity * 100)
+  return(data$Event_Severity)
+}
+
+country$Event_Severity <- add_Event_Severity(country)
+
+head(country)
+
+```
+Feature 2 
+```{r}
+country$Event_factor<-as.integer(as.factor(country$Event))
+```
+write csv 
+```{r}
+# Save country data frame to CSV
+write.csv(country, file = "country_cleaned.csv", row.names = FALSE)
+
+```
+Combining into one continent
+```{r}
+asia <- rbind(country_c)
+
+```
+Preprocessing Visualization (Continent)
+```{r}
+continent_perc <- continent %>%
+  mutate(
+    Total = DataCards + Deaths + `Houses.Ruined` + Affected,
+    DataCards_perc = DataCards / Total,
+    Deaths_perc = Deaths / Total,
+    Houses_Ruined_perc = `Houses.Ruined` / Total,
+    Affected_perc = Affected / Total
+  ) %>%
+  select(Event, DataCards_perc, Deaths_perc, Houses_Ruined_perc, Affected_perc)
+
+continent_long <- asia_perc %>%
+  pivot_longer(cols = -Event, names_to = "Factor", values_to = "Percentage")
+# more than 50 % of total i.e more than mean will be filtered
+threshold <- 50
+
+filtered_continent_long <- continent_long %>%
+  group_by(Event) %>%
+  summarise(Total_Percentage = sum(Percentage)) %>%
+  filter(Total_Percentage > threshold) %>%
+  inner_join(asia_long, by = "Event") %>%
+  ungroup()
+
+ggplot(filtered_continent_long, aes(x = "", y = Percentage, fill = Event)) +
+  geom_bar(stat = "identity", width = 1) +
+  facet_wrap(~Factor) +
+  coord_polar(theta = "y") +
+  theme_minimal() +
+  ggtitle("Event Distribution by Factor (Asia)")
+
+
+```
+Preprocessing data visualization
+```{r}
+#or combined plot
+# Calculate total for each factor
+country_c<- country_c %>%
+  mutate(Total = DataCards + Deaths + Houses.Ruined + Affected)
+
+# Calculate percentages within each factor for each event
+ country_c_perc <- country_c %>%
+  mutate(
+    DataCards_perc = DataCards / Total,
+    Deaths_perc = Deaths / Total,
+    Houses_Ruined_perc = Houses.Ruined / Total,
+    Affected_perc = Affected / Total
+  ) %>%
+  select(Event, DataCards_perc, Deaths_perc, Houses_Ruined_perc, Affected_perc)
+
+# Reshape the data into long format
+ country_c_long <-  country_c_perc %>%
+  pivot_longer(cols = -Event, names_to = "Factor", values_to = "Percentage")
+
+# Create a pie chart using ggplot2
+ggplot( country_c_long, aes(x = "", y = Percentage, fill = Event)) +
+  geom_bar(stat = "identity", width = 1) +
+  facet_wrap(~Factor) +  # Separate pie for each factor
+  coord_polar(theta = "y") +
+  theme_minimal() +
+  ggtitle("Event Distribution by Factor (Percentage)")
+
+```
+Parameter for continent
+```{r}
+# Get only numeric Values
+numeric_data <- continent[, sapply(continent, is.numeric)]
+
+# find PCA
+scaled_data <- scale(numeric_data)
+pca_result <- prcomp(scaled_data, center = TRUE, scale. = TRUE)
+summary(pca_result)
+formula <- numeric_data$Deaths ~ numeric_data$DataCards + numeric_data$Deaths + numeric_data$Monetary.LossUSD + numeric_data$Event_Severity + numeric_data$Houses.Ruined + numeric_data$Affected
+  model <- lm(formula, data = numeric_data)
+
+  vif_result <- car::vif(model)
+
+  cat("\n","VIF results for Deaths", ":\n")
+  print(vif_result)
+  cat("\n")
+  
+#check for correlation matrix 
+cor_matrix <- cor(numeric_data)
+print("Correlation matrix ")
+print(cor_matrix)
+set.seed(123)
+split_indices <- createDataPartition(asia$Year, p = 0.7, list = FALSE)
+
+training_data_continent <- numeric_data[split_indices, ]
+testing_data_continent <- numeric_data[-split_indices, ]
+
+```
+Case 1 split
+```{r}
+set.seed(123)
+
+# Create a vector of indices indicating the split
+split_indices <- createDataPartition(country_c$Year, p = 0.7, list = FALSE)
+
+# Create training and testing sets
+training_data_country <- country_c[split_indices, ]
+testing_data_country <- country_c[-split_indices, ]
+
+```
+CASE 2 split
+```{r}
+# When Imbalanced Distribution: There's considerable variation in the number of observations across different years. Some years have only a few observations while others have many more. ur glmnet is not working- : our first Case of disturbance in modelling u can check ur distubution by table(senegal_c$Year)
+
+
+# Get unique years in the dataset
+unique_years <- unique(country_c$Year)
+
+# Initialize empty lists for training and testing indices
+train_indices <- test_indices <- c()
+
+# Iterate through each unique year and split indices for each year
+for (year in unique_years) {
+  # Get indices for the current year
+  year_indices <- which(country_c$Year == year)
+  
+  # Calculate the number of samples for training based on proportion (e.g., 70%)
+  num_samples_train <- round(length(year_indices) * 0.7)
+  
+  # Randomly sample indices for training and testing
+  train_indices <- c(train_indices, sample(year_indices, num_samples_train))
+  test_indices <- c(test_indices, setdiff(year_indices, train_indices))
+}
+
+# Create training and testing sets based on the selected indices
+training_data_country <- country_c[train_indices, ]
+testing_data_country <- country_c[test_indices,]
+```
+PCA , VIF AND CORRELATIONMATRIX
+```{r}
+# if ur monetary usd is 0 insert that too with event to perform pca
+country_no_event <- country_c[, !names(srilanka_c) %in% c("Event")]
+
+# scale ur new data
+scaled_data <- scale(srilanka_no_event)
+
+pca_result <- prcomp(scaled_data, center = TRUE, scale. = TRUE)
+#check pca
+summary(pca_result)
+# check multicolinearity for deaths.
+# REMOVE MOTETARY USD IF YOU HAVE IT AS 0 
+formula <- country_c$Deaths ~ country_c$DataCards + country_c$Deaths + country_c$Monetary.LossUSD + country_c$Event_Severity + country_c$Houses.Ruined + country_c$Affected
+  model <- lm(formula, data = country_c)
+
+  vif_result <- car::vif(model)
+
+  cat("\n","VIF results for Deaths", ":\n")
+  print(vif_result)
+  cat("\n")
+  
+cor_matrix <- cor(country_c[c("DataCards", "Deaths", "Monetary.LossUSD", "Event_Severity", "Houses.Ruined", "Affected")])
+print("Correlation matrix ")
+print(cor_matrix)
+
+```
+Model 1 - enet on death ~ - c(Event, Deaths)
+```{r}
+
+# Assuming 'Datacards' is response variable
+y <- training_data_country$DataCards
+X <- subset(training_data_country, select = -c(Event))  # Selecting features not to include
+
+# Setting the data into training and testing sets
+train_data <- training_data_country
+test_data <-  testing_data_country
+
+# Creating matrices for glmnet
+X_train <- as.matrix(subset(train_data, select = -c(Event))) 
+y_train <- train_data$DataCards
+X_test <- as.matrix(subset(test_data, select = -c(Event)))
+y_test <- test_data$DataCards
+
+# Standardizing the predictors
+X_train_std <- scale(X_train)
+X_test_std <- scale(X_test)
+
+# Fit the elastic net model
+enet_model_country<- cv.glmnet(X_train_std, y_train, alpha = 0.5)  # alpha = 0.5 indicates the elastic net
+
+best_lambda <- enet_model_country$lambda.min
+# with best Lamda
+y_pred <- predict(enet_model_country, newx = X_test_std, s = best_lambda)
+
+# Evaluating the model
+mse <- mean((y_pred - y_test)^2)
+rsquared <- cor(y_pred, y_test)^2
+
+cat("Best Lambda:", best_lambda, "\n")
+cat("Mean Squared Error:", mse, "\n")
+cat("R-squared:", rsquared, "\n")
+
+
+```
+
+```{r}
+plot(enet_model_country)
+
+plot(y_test, y_pred, main = "Actual vs Predicted", xlab = "Actual", ylab = "Predicted")
+abline(0, 1, col = "red") 
+```
+Model 2 -  random forest death ~ - c(Event, Deaths) 
+```{r}
+# if country has 0 column .. i.e monetary usd is 0 them in
+y <- training_data_country$Deaths
+X <- subset(training_data_country, select = - c(Event,Deaths,DataCards ))  
+
+train_data <- training_data_country
+test_data <-  testing_data_country
+
+X_train <- as.matrix(subset(train_data, select = - c(Event,Deaths,DataCards ))) 
+y_train <- train_data$Deaths
+X_test <- as.matrix(subset(test_data, select = - c(Event,Deaths,DataCards)))
+y_test <- test_data$Deaths
+
+rf_model_complex <- randomForest(
+  X_train, y_train,
+  ntree = 1000,     
+  mtry = sqrt(ncol(X_train)), 
+  max_depth = NULL
+)
+
+y_pred_rf_complex <- predict(rf_model_complex, X_test, type = "response")
+mse_rf_complex <- mean((y_pred_rf_complex - y_test)^2)
+rsquared_rf_complex <- cor(y_pred_rf_complex, y_test)^2
+
+cat("Random Forest- Mean Squared Error:", mse_rf_complex, "\n")
+cat("Random Forest - R-squared:", rsquared_rf_complex, "\n")
+```
+
+```{r}
+plot(predictions, y_test, 
+     xlab = "Predicted Values", ylab = "Actual Values",
+     main = "Predicted vs. Actual Values")
+
+abline(0, 1, col = "red") 
+```
+cluster 1
+```{r}
+#View the distribution of the newly created classification
+#table(country_c$Severity_Class)
+
+country_c$Severity_Class <- ifelse(country_c$Event_Severity >= mean(country_c$Event_Severity), "High Severity", "Low Severity")
+
+# Define the quartiles of the 'Year' column to split into temporal categories
+year_quantiles <- quantile(country_c$Year, probs = c(0, 1/3, 2/3, 1))
+
+# Classify based on quartiles of 'Year'
+country_c$Temporal_Class <- cut(country_c$Year,
+                                  breaks = year_quantiles,
+                                  labels = c("Early Period", "Mid Period", "Recent Period"),
+                                  include.lowest = TRUE)
+
+country_c$Combined_Impact <- rowSums(subset(turkey_c, select =  c(Deaths, Houses.Ruined, Afftected, Monetary.LossUSD)))
+
+# Calculate quartiles of combined impact
+quantiles <- quantile(country_c$Combined_Impact, probs = c(0, 0.25, 0.75, 1))
+
+# Classify based on quartiles
+country_c$Impact_Class <- cut(country_c$Combined_Impact,
+                                breaks = quantiles,
+                                labels = c("Minimal Impact", "Moderate Impact", "Severe Impact"),
+                                include.lowest = TRUE)
+
+
+#Cluster on the basis of DataCards
+kmeans_result <- kmeans(country_c$DataCards, centers = 4)
+country_c$cluster_id <- factor(kmeans_result$cluster)
+
+# Get the mean values of DataCards for each cluster
+cluster_means <- aggregate(country_c$DataCards, by = list(vietnam_c$cluster_id), FUN = mean)
+
+# Sort the clusters by mean DataCards value
+sorted_clusters <- cluster_means[order(cluster_means$x),]
+
+# Create a mapping of new labels based on the sorted order of clusters
+label_mapping <- c("Most DataCards", "Moderately High DataCards", "Moderately Less DataCards", "Least DataCards")
+
+# Assign new labels based on the sorted order
+country_c$cluster_label <- label_mapping[match(country_c$cluster_id, sorted_clusters$Group.1)]
+
+# do the above code for all countries
+```
+
+```{r}
+# do it for all ur countires 5 / 3
+combined_data <- rbind(
+  data.frame(Country = "Country", Severity_Class = country_c$Severity_Class, Temporal_Class =country_c$Temporal_Class, Impact_Class = country_c$Impact_Class,  cluster_id =  country_c$cluster_label, Year = country_c$Year ),
+)
+```
+
+```{r}
+classify_disaster <- function(severity, impact, cluster) {
+  risk_level <- character(length = length(severity))
+  
+ for (i in 1:length(severity)) {
+    if (severity[i] == "High Severity") {
+      if (impact[i] == "Very Severe Impact") {
+        risk_level[i] <- "Extremely High Risk"
+      } else if (impact[i] == "Severe Impact") {
+        risk_level[i] <- "Very High Risk"
+      } else if (impact[i] == "Moderate Impact") {
+        risk_level[i] <- "High-Moderate Risk"
+      } else {
+        risk_level[i] <- "High-Low Risk"
+      }
+    } else if (severity[i] == "Low Severity") {
+      if (impact[i] == "Severe Impact") {
+        risk_level[i] <- "Moderate-High Risk"
+      } else if (impact[i] == "Moderate Impact") {
+        risk_level[i] <- "Moderate Risk"
+      } else {
+        risk_level[i] <- "Low Risk"
+      }
+    } else if (impact[i] == "Severe Impact") {
+      risk_level[i] <- "High Risk"
+    } else if (cluster[i] == "Most DataCards") {
+      risk_level[i] <- "Clustered Risk"
+    } else if (cluster[i] == "Moderately High DataCards") {
+      risk_level[i] <- "Moderately High DataCards Risk"
+    } else if (cluster[i] == "Moderately Less DataCards") {
+      risk_level[i] <- "Moderately Less DataCards Risk"
+    } else if (cluster[i] == "Least DataCards") {
+      risk_level[i] <- "Least DataCards Risk"
+    } else {
+      risk_level[i] <- "Undefined Risk"
+    }
+  }
+  
+  return(risk_level)
+}
+
+combined_data_asia_1$Disaster_Risk <- classify_disaster(
+  combined_data_asia_1$Severity_Class,
+  combined_data_asia_1$Impact_Class,
+  combined_data_asia_1$cluster_id
+)
+
+
+
+```
+
+```{r}
+combined_data_asia_1$Year <- as.factor(combined_data_asia_1$Temporal_Class)
+
+heatmap <- ggplot(combined_data_asia_1, aes(x = Year, y = Country, fill = Disaster_Risk)) +
+  geom_tile() +
+  scale_fill_manual(values = c(
+    "Extremely High Risk" = "red",
+    "Very High Risk" = "orange",
+    "High-Moderate Risk" = "yellow",
+    "High-Low Risk" = "yellowgreen",
+    "Moderate-High Risk" = "green",
+    "Moderate Risk" = "lightblue",
+    "Low Risk" = "blue",
+    "High Risk" = "purple",
+    "Clustered Risk" = "skyblue",
+    "Moderately High DataCards Risk" = "pink",
+    "Moderately Less DataCards Risk" = "violet",
+    "Least DataCards Risk" = "grey",
+    "Undefined Risk" = "white"
+  )) +
+  labs(
+    title = "Disaster Risk Heatmap",
+    x = "Year",
+    y = "Country",
+    fill = "Disaster Risk"
+  ) +
+  theme_minimal()
+print(heatmap)
+
+
+
+```
+cluster 2
+```{r}
+# combine ur countries into a single continent
+country_c$Country <- "country"
+countinent <- rbind(country_c)
+# Scale ur data
+scaled_data <- scale(data_for_clustering)
+# for produvtivity
+set.seed(123) 
+clara_output <- clara(scaled_data, k = 5, samples = 500)
+
+# to view the distribution of clusters
+table(clara_output$clustering)
+
+colors <- rainbow(length(unique(clara_output$clustering)))
+
+
+scaled_data_with_clusters <- cbind(scaled_data, Cluster = clara_output$clustering)
+# plot the cluster
+pairs(scaled_data_with_clusters[, -ncol(scaled_data_with_clusters)], 
+      col = colors[clara_output$clustering], pch = 19)
+
+legend("left", legend = unique(clara_output$clustering), fill = colors, title = "Clusters")
+
+```
+
+
