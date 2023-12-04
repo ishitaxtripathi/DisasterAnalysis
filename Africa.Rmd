@@ -4,16 +4,20 @@ author: "Ishita Tripathi"
 date: "2023-11-27"
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+
+```{r setup2, include = FALSE, purl = FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+```{r}
+setwd("D:/Post graduation/Semester 1/Data Analysis/Coursework/Group 18")
 ```
 
 ## R Markdown
-
-Directory
-```{r}
-setwd("D:/Post graduation/Semester 1/Data Analysis/Coursework/Group 18/Africa")
-```
 Library
 ```{r}
 library(dplyr)
@@ -93,6 +97,7 @@ print(paste("senegal: ", sum(duplicated(senegal))))
 print(paste("tunisia: ", sum(duplicated(tunisia))))
 
 ```
+ 
 ```{r}
 tanzania$Event <- toupper(tanzania$Event)
 uganda$Event <- toupper(uganda$Event)
@@ -100,8 +105,6 @@ zambia$Event <- toupper(zambia$Event)
 senegal$Event <- toupper(senegal$Event)
 tunisia$Event <- toupper(tunisia$Event)
 ```
-
-
 Data Tranformation
 ```{r}
 uganda$Houses.Ruined <-uganda$Houses.Destroyed + uganda$Houses.Damaged
@@ -246,7 +249,7 @@ filtered_africa_long <- africa_long %>%
   group_by(Event) %>%
   summarise(Total_Percentage = sum(Percentage)) %>%
   filter(Total_Percentage > threshold) %>%
-  inner_join(asia_long, by = "Event") %>%
+  inner_join(africa_long  , by = "Event") %>%
   ungroup()
 
 ggplot(filtered_africa_long, aes(x = "", y = Percentage, fill = Event)) +
@@ -643,7 +646,6 @@ cat("Random Forest- Mean Squared Error:", mse_rf_complex, "\n")
 cat("Random Forest - R-squared:", rsquared_rf_complex, "\n")
 
 ```
-
 Zambia - model2- 0.89 death ~ - c(Event,Deaths)
 ```{r}
 
@@ -673,7 +675,6 @@ cat("Random Forest- Mean Squared Error:", mse_rf_complex, "\n")
 cat("Random Forest - R-squared:", rsquared_rf_complex, "\n")
 
 ```
-
 Uganda - model2- 0.85 death ~ - c(Event,Deaths)
 ```{r}
 y <- training_data_uganda$Deaths
@@ -702,7 +703,6 @@ cat("Random Forest- Mean Squared Error:", mse_rf_complex, "\n")
 cat("Random Forest - R-squared:", rsquared_rf_complex, "\n")
 
 ```
-
 Senegal - model2- 0.05 death ~ - c(Event,Deaths)
 ```{r}
 y <- training_data_senegal$Deaths
@@ -730,7 +730,6 @@ rsquared_rf_complex <- cor(y_pred_rf_complex, y_test)^2
 cat("Random Forest- Mean Squared Error:", mse_rf_complex, "\n")
 cat("Random Forest - R-squared:", rsquared_rf_complex, "\n")
 ```
-
 Tunisisa - model2- 0.38 death ~ - c(Event,Deaths,DataCards)
 ```{r}
 y <- training_data_tunisia$Deaths
@@ -758,7 +757,6 @@ rsquared_rf_complex <- cor(y_pred_rf_complex, y_test)^2
 cat("Random Forest- Mean Squared Error:", mse_rf_complex, "\n")
 cat("Random Forest - R-squared:", rsquared_rf_complex, "\n")
 ```
-
 Cluster 1
 ```{r}
 tanzania_c$Severity_Class <- ifelse(tanzania_c$Event_Severity >= mean(tanzania_c$Event_Severity), "High Severity", "Low Severity")
@@ -1006,7 +1004,7 @@ senegal_c$Country <- "Sengeal"
 zambia_c$Country <- "Zambia"
 uganda_c$Country <- "Uganda"
 
-africa <- rbind(tanzania_c,tunisia_c, senegal_c, zambia_c, uganda_c)
+africas <- rbind(tanzania_c,tunisia_c, senegal_c, zambia_c, uganda_c)
 
 data_for_clustering <-africa[, c("Year", "Deaths", "Monetary.LossUSD", "Affected")]
 

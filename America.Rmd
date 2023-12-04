@@ -3,14 +3,16 @@ title: "America"
 author: "Ishita Tripathi"
 date: "2023-11-27"
 ---
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup3, include = FALSE, purl = FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
 ```
 
-Directory
 ```{r}
-setwd("D:/Post graduation/Semester 1/Data Analysis/Coursework/Group 18/America")
+setwd("D:/Post graduation/Semester 1/Data Analysis/Coursework/Group 18")
 ```
 Libraries
 ```{r}
@@ -183,7 +185,7 @@ Combining into one continent
 ```{r}
 america <- rbind(guatemala_c,drepublic_c,mexico_c)
 ```
-Preprocessing Visualization (Continent)
+Preprocessing Visualization continent
 ```{r}
 america_perc <- america %>%
   mutate(
@@ -288,7 +290,6 @@ ggplot( mexico_c_long, aes(x = "", y = Percentage, fill = Event)) +
   theme_minimal() +
   ggtitle("Event Distribution by Factor (Mexico)")
 ```
-
 Split(Continent) and parameter
 ```{r}
 # Get only numeric Values
@@ -473,7 +474,6 @@ rsquared_rf_complex <- cor(y_pred_rf_complex, y_test)^2
 cat("Random Forest- Mean Squared Error:", mse_rf_complex, "\n")
 cat("Random Forest - R-squared:", rsquared_rf_complex, "\n")
 ```
-
 Dominican Republic  model 2 - 0.54 death ~ - c(Event, Deaths) modle 1 perform 0.88
 ```{r}
 y <- training_data_drepublic$Deaths
@@ -501,7 +501,6 @@ rsquared_rf_complex <- cor(y_pred_rf_complex, y_test)^2
 cat("Random Forest- Mean Squared Error:", mse_rf_complex, "\n")
 cat("Random Forest - R-squared:", rsquared_rf_complex, "\n")
 ```
-
 Mexico  model 2 - 0.70 death ~ - c(Event, Deaths) model 1 perform 0.98
 ```{r}
 y <- training_data_mexico$Deaths
@@ -529,7 +528,6 @@ rsquared_rf_complex <- cor(y_pred_rf_complex, y_test)^2
 cat("Random Forest- Mean Squared Error:", mse_rf_complex, "\n")
 cat("Random Forest - R-squared:", rsquared_rf_complex, "\n")
 ```
-
 Cluster 1
 ```{r}
 guatemala_c$Severity_Class <- ifelse(guatemala_c$Event_Severity >= mean(guatemala_c$Event_Severity), "High Severity", "Low Severity")
@@ -689,7 +687,6 @@ combined_data_america$cluster_id
 
 ```
 
-
 ```{r}
 combined_data_america$Year <- as.factor(combined_data_america$Temporal_Class)
 
@@ -721,14 +718,13 @@ print(heatmap_america)
 
 
 ```
-
 Cluster 2
 ```{r}
 guatemala_c$Country <- "Guatemala"
 drepublic_c$Country <- "Drepublic"
 mexico_c$Country <- "Mexico"
 
-america <- rbind(guatemala_c, drepublic_c, mexico_c)
+americas <- rbind(guatemala_c, drepublic_c, mexico_c)
 data_for_clustering <-america[, c("Year", "Deaths", "Monetary.LossUSD", "Affected")]
 scaled_data <- scale(data_for_clustering)
 

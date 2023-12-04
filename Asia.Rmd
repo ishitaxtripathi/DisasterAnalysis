@@ -4,7 +4,7 @@ author: "Ishita Tripathi"
 date: "2023-11-09"
 ---
 
-```{r setup, include = FALSE, purl = FALSE}
+```{r setup1, include = FALSE, purl = FALSE}
 knitr::opts_chunk$set(
 	echo = TRUE,
 	message = FALSE,
@@ -13,11 +13,10 @@ knitr::opts_chunk$set(
 ```
 
 ## R Markdown
-
-Directory
 ```{r}
-setwd("D:/Post graduation/Semester 1/Data Analysis/Coursework/Group 18/Asia")
+setwd("D:/Post graduation/Semester 1/Data Analysis/Coursework/Group 18")
 ```
+
 Libraries
 ```{r}
 library(dplyr)
@@ -766,11 +765,11 @@ y_test <- test_data$Deaths
 X_train_std <- scale(X_train)
 X_test_std <- scale(X_test)
 
-enet_model_yemen <- cv.glmnet(X_train_std, y_train, alpha = 0.5) 
+enet_model_srilanka <- cv.glmnet(X_train_std, y_train, alpha = 0.5) 
 
-best_lambda <- enet_model_yemen$lambda.min
+best_lambda <- enet_model_srilanka$lambda.min
 
-y_pred <- predict(enet_model_vietnam, newx = X_test_std, s = best_lambda)
+y_pred <- predict(enet_model_srilanka, newx = X_test_std, s = best_lambda)
 
 mse <- mean((y_pred - y_test)^2)
 rsquared <- cor(y_pred, y_test)^2
@@ -1045,7 +1044,7 @@ yemen_c$Country <- "Yemen"
 pakistan_c$Country <- "Pakistan"
 srilanka_c$Country <- "Sri Lanka"
 
-asia <- rbind(turkey_c, vietnam_c, yemen_c, pakistan_c, srilanka_c)
+asias <- rbind(turkey_c, vietnam_c, yemen_c, pakistan_c, srilanka_c)
 
 data_for_clustering <-asia[, c("Year", "Deaths", "Monetary.LossUSD", "Affected")]
 
@@ -1062,4 +1061,3 @@ pairs(scaled_data_with_clusters[, -ncol(scaled_data_with_clusters)],
 
 legend("left", legend = unique(clara_output$clustering), fill = colors, title = "Clusters")
 ```
-
