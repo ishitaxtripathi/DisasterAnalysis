@@ -1,5 +1,5 @@
 ---
-title: "Group 18"
+title: "Disater Analysis"
 author: "Ishita Tripathi"
 date: "2023-11-30"
 output:
@@ -12,8 +12,24 @@ knitr::opts_chunk$set(
 	warning = FALSE
 )
 ```
+## Group18
+```{r}
+setwd("D:/Post graduation/Semester 1/Data Analysis/Coursework/Group 18")
+```
 
-combine Datasets
+#Libraries
+```{r}
+library(dplyr)
+library(tidyr) 
+library(ggplot2) 
+library(randomForest)
+library(car) 
+library(glmnet) 
+library(caret) 
+library(cluster)
+```
+
+
 ```{r, child='Asia.Rmd'}
   asias <- transform(asias,Continent = "Asia")
 ```
@@ -28,13 +44,12 @@ combine Datasets
 
 ```{r}
 # combine the continents
-
 combined_data <- rbind(transform(asias,Continent = "Asia"),
                        transform(africas, Continent = "Africa"),
                        transform(americas, Continent = "America") )
 ```
 
-Visualize the data
+#Visualize the data
 ```{r}
 combined_data_perc <- combined_data %>%
   mutate(
@@ -66,7 +81,7 @@ ggplot(filtered_combined_data_long, aes(x = "", y = Percentage, fill = Event)) +
   ggtitle("Event Distribution by Factor (Percentage)")
 
 ```
-Parameters for modelling
+#Parameters for modelling
 ```{r}
 # Get only numeric Values
 numeric_data <- combined_data[, sapply(combined_data, is.numeric)]
@@ -75,7 +90,7 @@ numeric_data <- combined_data[, sapply(combined_data, is.numeric)]
 scaled_data <- scale(numeric_data)
 pca_result <- prcomp(scaled_data, center = TRUE, scale. = TRUE)
 summary(pca_result)
-formula <- numeric_data$Deaths ~ numeric_data$DataCards + numeric_data$Deaths + numeric_data$Monetary.LossUSD + numeric_data$Event_Severity + numeric_data$Houses.Ruined + numeric_data$Affected
+formula <- numeric_data$Deaths ~ numeric_data$DataCards + numeric_data$Deaths + numeric_data$Monetary.LossUSD + numeric_data$Event_Severity + numeric_data$Houses.Ruined + numeric_data$Affected+ numeric_data$Total +numeric_data $Combined_Impact
   model <- lm(formula, data = numeric_data)
 
   vif_result <- car::vif(model)
@@ -95,7 +110,8 @@ split_indices <- createDataPartition(numeric_data$Year, p = 0.7, list = FALSE)
 training_data_combined <- numeric_data[split_indices, ]
 testing_data_combined <- numeric_data[-split_indices, ]
 ```
-Model 1 enet on MonetaryUSD ~ !MonetaryUSD - 99 % accuracy
+
+#Model 1 enet on MonetaryUSD ~ !MonetaryUSD - 99 % accuracy
 ```{r}
 train_data <- training_data_combined
 test_data <-  testing_data_combined
@@ -121,14 +137,21 @@ cat("Best Lambda:", best_lambda, "\n")
 cat("Mean Squared Error:", mse, "\n")
 cat("R-squared:", rsquared, "\n")
 ```
-Visualization of model 
-```{r}
-plot(enet_model_combined)
 
-plot(y_test, y_pred, main = "Actual vs Predicted", xlab = "Actual", ylab = "Predicted")
-abline(0, 1, col = "red")
+#Visualization of model 
+```{r}
+results <- data.frame(
+  Actual = y_test,
+  Predicted = y_pred
+)
+ggplot(results, aes(x = Actual, y = s1)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
+  labs(x = "Actual", y = "Predicted", title = "Actual vs Predicted") +
+  theme_minimal()
 ```
-Model 2 random forest on death ~ !Event+Death  - 85 % accuracy
+
+#Model 2 random forest on death ~ !Event+Death  - 85 % accuracy
 ```{r}
 train_data <- training_data_combined
 test_data <-  testing_data_combined
@@ -155,7 +178,21 @@ cat("Random Forest- Mean Squared Error:", mse_rf_complex, "\n")
 cat("Random Forest - R-squared:", rsquared_rf_complex, "\n")
 
 ```
-cluster 1
+#Visualization of model 
+```{r}
+results <- data.frame(
+  Actual = y_test,
+  Predicted = y_pred_rf_complex
+)
+ggplot(results, aes(x = Actual, y = Predicted)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
+  labs(x = "Actual", y = "Predicted", title = "Actual vs Predicted") +
+  theme_minimal()
+
+```
+
+#cluster 1
 ```{r}
 classify_disaster <- function(severity, impact, cluster) {
   risk_level <- character(length = length(severity))
@@ -202,9 +239,10 @@ heatmap_disaster_classes <- ggplot(combined_data, aes(x = Continent, y = Tempora
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 print(heatmap_disaster_classes)
 ```
-cluster 2
+
+#cluster 2
 ```{r}
-data_for_clustering <- combined_data[, c("Year", "Deaths", "Monetary.LossUSD", "Affected")]
+data_for_clustering <- combined_data[, c("DataCards", "Deaths", "Monetary.LossUSD")]
 
 scaled_data <- scale(data_for_clustering)
 

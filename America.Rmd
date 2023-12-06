@@ -10,11 +10,12 @@ knitr::opts_chunk$set(
 	warning = FALSE
 )
 ```
-
+## AMERICA
 ```{r}
 setwd("D:/Post graduation/Semester 1/Data Analysis/Coursework/Group 18")
 ```
-Libraries
+
+#Libraries
 ```{r}
 library(dplyr)
 library(tidyr) 
@@ -25,22 +26,22 @@ library(glmnet)
 library(caret) 
 library(cluster)
 ```
+
 Raw Data Reading
+
 ```{r}
 
-#Guatemala
 guatemala <- read.csv("guatemala.csv",header=TRUE,na.strings=c(""))
 colnames(guatemala) <- gsub("^\\s+|\\s+$", "", colnames(guatemala))#
 
-#Dominican Republic
 drepublic <- read.csv("drepublic.csv",header=TRUE,na.strings=c(""))
 colnames(drepublic) <- gsub("^\\s+|\\s+$", "", colnames(drepublic))
 
-#Mexico
 mexico <- read.csv("mexico.csv",header=TRUE,na.strings=c(""))
 colnames(mexico) <- gsub("^\\s+|\\s+$", "", colnames(mexico))
 
 ```
+
 Data PreProcessing: Missing Values, Duplicate Values
 ```{r}
 
@@ -50,14 +51,16 @@ print(paste("Drepublic: ",sum(is.na(drepublic))))
 print(paste("Mexico: ",sum(is.na(mexico))))
 ```
 
+
 ```{r}
-#Guatemala missing values          
+       
 guatemala <- na.omit(guatemala, cols = c('Event'))
-#Dominican Republic missing values          
+        
 drepublic <- na.omit(drepublic, cols = c('Event'))
-#Mexico missing values          
+       
 mexico <- na.omit(mexico, cols = c('Event'))
 ```
+
 
 ```{r}
 print("Total Missing Values: ")
@@ -66,6 +69,7 @@ print(paste("Drepublic: ",sum(is.na(drepublic))))
 print(paste("Mexico: ",sum(is.na(mexico))))
 ```
 
+
 ```{r}
 print("Total Duplicate values")
 print(paste("Guatemala: ", sum(duplicated(guatemala))))
@@ -73,11 +77,13 @@ print(paste("DRepublic: ", sum(duplicated(drepublic))))
 print(paste("Mexico: ", sum(duplicated(mexico))))
 ```
 
+
 ```{r}
 guatemala$Event <- toupper(guatemala$Event)
 drepublic$Event <- toupper(drepublic$Event)
 mexico$Event <- toupper(mexico$Event)
 ```
+
 
 ```{r}
 
@@ -100,6 +106,7 @@ mexico$Event <- sapply(mexico$Event, translate_mexican_to_english)
 
 
 ```
+
 Data Tranformation
 ```{r}
 guatemala$Houses.Ruined <- guatemala$Houses.Destroyed + guatemala$Houses.Damaged
@@ -115,6 +122,7 @@ summary(guatemala)
 
 ```
 
+
 ```{r}
 drepublic$Houses.Ruined <- drepublic$Houses.Destroyed +drepublic$Houses.Damaged
 drepublic$Affected <-drepublic$Directly.affected + drepublic$Indirectly.Affected
@@ -127,17 +135,19 @@ head(drepublic)
 summary(drepublic)
 ```
 
+
 ```{r}
 mexico$Houses.Ruined <-mexico$Houses.Destroyed + mexico$Houses.Damaged
 mexico$Affected <-mexico$Directly.affected + mexico$Indirectly.Affected
 
 mexico$Monetary.LossUSD<-mexico$Losses..USD + mexico$Losses..Local * (0.060)
 mexico$Monetary.LossUSD <- as.integer(mexico$Monetary.LossUSD)
-# AS There were 19 values highter than e9
+# AS There were 19 values higher than e9
 mexico$Monetary.LossUSD[is.na(mexico$Monetary.LossUSD)] <- max(mexico$Monetary.LossUSD, na.rm = TRUE)
 mexico= select(mexico, -5:-10)
 summary(mexico)
 ```
+
 Feature Addition 1
 ```{r}
 add_Event_Severity <- function(data) {
@@ -163,29 +173,34 @@ guatemala$Event_Severity <- add_Event_Severity(guatemala)
 drepublic$Event_Severity <- add_Event_Severity(drepublic)
 mexico$Event_Severity <- add_Event_Severity(mexico)
 ```
+
 Feature Addition 2
 ```{r}
 guatemala$Event_factor<-as.integer(as.factor(guatemala$Event))
 drepublic$Event_factor<-as.integer(as.factor(drepublic$Event))
 mexico$Event_factor<-as.integer(as.factor(mexico$Event))
 ```
+
 Write Cleaned csv
 ```{r}
 write.csv(guatemala, file = "guatemala_cleaned.csv", row.names = FALSE)
 write.csv(drepublic, file = "drepublic_cleaned.csv", row.names = FALSE)
 write.csv(mexico, file = "mexico_cleaned.csv", row.names = FALSE)
 ```
+
 Read Cleaned csv
 ```{r}
 guatemala_c <- read.csv("guatemala_cleaned.csv",header=TRUE)
 drepublic_c <- read.csv("drepublic_cleaned.csv",header=TRUE)
 mexico_c <- read.csv("mexico_cleaned.csv",header=TRUE)
 ```
-Combining into one continent
+
+Combining into America
 ```{r}
 america <- rbind(guatemala_c,drepublic_c,mexico_c)
 ```
-Preprocessing Visualization continent
+
+#Preprocessing Visualization America
 ```{r}
 america_perc <- america %>%
   mutate(
@@ -218,6 +233,7 @@ ggplot(filtered_america_long, aes(x = "", y = Percentage, fill = Event)) +
 
 
 ```
+
 Preprocessing Visualization
 ```{r}
 guatemala_c<- guatemala_c %>%
@@ -243,6 +259,7 @@ ggplot( guatemala_c_long, aes(x = "", y = Percentage, fill = Event)) +
   ggtitle("Event Distribution by Factor (guatemala)")
 ```
 
+
 ```{r}
 drepublic_c<- drepublic_c %>%
   mutate(Total = DataCards + Deaths + Houses.Ruined + Affected)
@@ -267,6 +284,7 @@ ggplot( drepublic_c_long, aes(x = "", y = Percentage, fill = Event)) +
   ggtitle("Event Distribution by Factor (D Republic)")
 ```
 
+
 ```{r}
 mexico_c<- mexico_c %>%
   mutate(Total = DataCards + Deaths + Houses.Ruined + Affected)
@@ -290,7 +308,8 @@ ggplot( mexico_c_long, aes(x = "", y = Percentage, fill = Event)) +
   theme_minimal() +
   ggtitle("Event Distribution by Factor (Mexico)")
 ```
-Split(Continent) and parameter
+
+Split(America) and parameter
 ```{r}
 # Get only numeric Values
 numeric_data <- america [, sapply(america , is.numeric)]
@@ -319,6 +338,7 @@ training_data_america  <- numeric_data[split_indices, ]
 testing_data_america  <- numeric_data[-split_indices, ]
 
 ```
+
 Model 1 enet on death ~ !Event - 28 % accuracy
 ```{r}
 train_data <- training_data_america 
@@ -345,7 +365,8 @@ cat("Best Lambda:", best_lambda, "\n")
 cat("Mean Squared Error:", mse, "\n")
 cat("R-squared:", rsquared, "\n")
 ```
-Model 2 random forest on death ~ !Event - 44% accuracy
+
+#Model 2 random forest on death ~ !Event - 44% accuracy
 ```{r}
 rf_model_complex <- randomForest(
   X_train, y_train,
@@ -363,6 +384,7 @@ cat("Random Forest - R-squared:", rsquared_rf_complex, "\n")
 
 ```
 
+Split(Indivisual) 
 ```{r}
 set.seed(123)
 split_indices <- createDataPartition(guatemala_c$Year, p = 0.7, list = FALSE)
@@ -370,6 +392,7 @@ split_indices <- createDataPartition(guatemala_c$Year, p = 0.7, list = FALSE)
 training_data_guatemala <- guatemala_c[split_indices, ]
 testing_data_guatemala <- guatemala_c[-split_indices, ]
 ```
+
 
 ```{r}
 set.seed(123)
@@ -379,6 +402,7 @@ training_data_drepublic <- drepublic_c[split_indices, ]
 testing_data_drepublic <- drepublic_c[-split_indices, ]
 ```
 
+
 ```{r}
 set.seed(123)
 split_indices <- createDataPartition(mexico_c$Year, p = 0.7, list = FALSE)
@@ -386,6 +410,7 @@ split_indices <- createDataPartition(mexico_c$Year, p = 0.7, list = FALSE)
 training_data_mexico <- mexico_c[split_indices, ]
 testing_data_mexico <- mexico_c[-split_indices, ]
 ```
+
 PCA VIF AND CORR MATRIX 
 ```{r}
 guatemala_no_event <- guatemala_c[, !names(guatemala_c) %in% c("Event", "Monetary.LossUSD")]
@@ -407,6 +432,7 @@ print("Correlation matrix ")
 print(cor_matrix)
 ```
 
+
 ```{r}
 drepublic_no_event <- drepublic_c[, !names(drepublic_c) %in% c("Event")]
 scaled_data <- scale(drepublic_no_event)
@@ -427,6 +453,7 @@ print("Correlation matrix ")
 print(cor_matrix)
 ```
 
+
 ```{r}
 mexico_no_event <- mexico_c[, !names(mexico_c) %in% c("Event")]
 scaled_data <- scale(mexico_no_event)
@@ -446,6 +473,7 @@ cor_matrix <- cor(mexico_c[c("DataCards", "Deaths", "Monetary.LossUSD", "Event_S
 print("Correlation matrix ")
 print(cor_matrix)
 ```
+
 Regression Model and Visual
 Guatemala - Model 2- 0.62 death ~ - c(Event, Deaths)
 ```{r}
@@ -474,7 +502,8 @@ rsquared_rf_complex <- cor(y_pred_rf_complex, y_test)^2
 cat("Random Forest- Mean Squared Error:", mse_rf_complex, "\n")
 cat("Random Forest - R-squared:", rsquared_rf_complex, "\n")
 ```
-Dominican Republic  model 2 - 0.54 death ~ - c(Event, Deaths) modle 1 perform 0.88
+
+Dominican Republic  model 2 - 0.54 death ~ - c(Event, Deaths) model 1 perform 0.88
 ```{r}
 y <- training_data_drepublic$Deaths
 X <- subset(training_data_drepublic, select =-  c(Event, Deaths))  # Selecting features not to include
@@ -501,6 +530,7 @@ rsquared_rf_complex <- cor(y_pred_rf_complex, y_test)^2
 cat("Random Forest- Mean Squared Error:", mse_rf_complex, "\n")
 cat("Random Forest - R-squared:", rsquared_rf_complex, "\n")
 ```
+
 Mexico  model 2 - 0.70 death ~ - c(Event, Deaths) model 1 perform 0.98
 ```{r}
 y <- training_data_mexico$Deaths
@@ -528,7 +558,8 @@ rsquared_rf_complex <- cor(y_pred_rf_complex, y_test)^2
 cat("Random Forest- Mean Squared Error:", mse_rf_complex, "\n")
 cat("Random Forest - R-squared:", rsquared_rf_complex, "\n")
 ```
-Cluster 1
+
+#Cluster 1
 ```{r}
 guatemala_c$Severity_Class <- ifelse(guatemala_c$Event_Severity >= mean(guatemala_c$Event_Severity), "High Severity", "Low Severity")
 
@@ -561,6 +592,7 @@ label_mapping <- c("Most DataCards", "Moderately High DataCards", "Moderately Le
 guatemala_c$cluster_label <- label_mapping[match(guatemala_c$cluster_id, sorted_clusters$Group.1)]
 
 ```
+
 
 ```{r}
 drepublic_c$Severity_Class <- ifelse(drepublic_c$Event_Severity >= mean(drepublic_c$Event_Severity), "High Severity", "Low Severity")
@@ -597,6 +629,7 @@ drepublic_c$cluster_label <- label_mapping[match(drepublic_c$cluster_id, sorted_
 
 ```
 
+
 ```{r}
 mexico_c$Severity_Class <- ifelse(mexico_c$Event_Severity >= mean(mexico_c$Event_Severity), "High Severity", "Low Severity")
 
@@ -629,6 +662,7 @@ mexico_c$cluster_label <- label_mapping[match(mexico_c$cluster_id, sorted_cluste
 
 ```
 
+
 ```{r}
 combined_data_america <- rbind(
   data.frame(Country = "Guatemala", Severity_Class = guatemala_c$Severity_Class, Temporal_Class =guatemala_c$Temporal_Class, Impact_Class = guatemala_c$Impact_Class,  cluster_id =  guatemala_c$cluster_label, Year = guatemala_c$Year ),
@@ -636,6 +670,7 @@ combined_data_america <- rbind(
   data.frame(Country = "Mexico", Severity_Class = mexico_c$Severity_Class, Temporal_Class =mexico_c$Temporal_Class, Impact_Class = mexico_c$Impact_Class, cluster_id =  mexico_c$cluster_label, Year = mexico_c$Year)
 )
 ```
+
 
 ```{r}
 classify_disaster <- function(severity, impact, cluster) {
@@ -687,6 +722,7 @@ combined_data_america$cluster_id
 
 ```
 
+
 ```{r}
 combined_data_america$Year <- as.factor(combined_data_america$Temporal_Class)
 
@@ -718,14 +754,15 @@ print(heatmap_america)
 
 
 ```
-Cluster 2
+
+#Cluster 2
 ```{r}
 guatemala_c$Country <- "Guatemala"
 drepublic_c$Country <- "Drepublic"
 mexico_c$Country <- "Mexico"
 
 americas <- rbind(guatemala_c, drepublic_c, mexico_c)
-data_for_clustering <-america[, c("Year", "Deaths", "Monetary.LossUSD", "Affected")]
+data_for_clustering <-america[, c("DataCards", "Deaths", "Monetary.LossUSD")]
 scaled_data <- scale(data_for_clustering)
 
 set.seed(123) 
