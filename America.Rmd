@@ -11,22 +11,6 @@ knitr::opts_chunk$set(
 )
 ```
 ## AMERICA
-```{r}
-setwd("D:/Post graduation/Semester 1/Data Analysis/Coursework/Group 18")
-```
-
-#Libraries
-```{r}
-library(dplyr)
-library(tidyr) 
-library(ggplot2) 
-library(randomForest)
-library(car) 
-library(glmnet) 
-library(caret) 
-library(cluster)
-```
-
 Raw Data Reading
 
 ```{r}
@@ -762,11 +746,12 @@ drepublic_c$Country <- "Drepublic"
 mexico_c$Country <- "Mexico"
 
 americas <- rbind(guatemala_c, drepublic_c, mexico_c)
-data_for_clustering <-america[, c("DataCards", "Deaths", "Monetary.LossUSD")]
+americas$cluster_id <- as.integer(as.character(americas$cluster_id))
+data_for_clustering <-americas[, c("cluster_id", "Deaths", "Monetary.LossUSD")]
 scaled_data <- scale(data_for_clustering)
 
 set.seed(123) 
-clara_output <- clara(scaled_data, k = 5, samples = 500)
+clara_output <- clara(scaled_data, k = 4, samples = 500)
 colors <- rainbow(length(unique(clara_output$clustering)))
 
 scaled_data_with_clusters <- cbind(scaled_data, Cluster = clara_output$clustering)

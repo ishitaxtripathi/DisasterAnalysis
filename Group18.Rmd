@@ -242,12 +242,14 @@ print(heatmap_disaster_classes)
 
 #cluster 2
 ```{r}
-data_for_clustering <- combined_data[, c("DataCards", "Deaths", "Monetary.LossUSD")]
+combined_data$cluster_id <- as.integer(as.character(combined_data$cluster_id))
+data_for_clustering <- combined_data[, c("cluster_id", "Deaths", "Monetary.LossUSD")]
 
 scaled_data <- scale(data_for_clustering)
 
 set.seed(123) 
-clara_output <- clara(scaled_data, k = 5, samples = 500)
+
+clara_output <- clara(scaled_data, k = 4, samples = 500)
 
 colors <- rainbow(length(unique(clara_output$clustering)))
 

@@ -13,22 +13,6 @@ knitr::opts_chunk$set(
 ```
 
 ## ASIA
-```{r}
-setwd("D:/Post graduation/Semester 1/Data Analysis/Coursework/Group 18")
-```
-
-#Libraries
-```{r}
-library(dplyr)
-library(tidyr) 
-library(ggplot2) 
-library(randomForest)
-library(car) 
-library(glmnet) 
-library(caret) 
-library(cluster)
-```
-
 Raw Data Reading
 ```{r}
 turkey <- read.csv("turkey.csv",header=TRUE,na.strings=c(""))
@@ -1042,13 +1026,13 @@ pakistan_c$Country <- "Pakistan"
 srilanka_c$Country <- "Sri Lanka"
 
 asias <- rbind(turkey_c, vietnam_c, yemen_c, pakistan_c, srilanka_c)
-
-data_for_clustering <-asia[, c("DataCards", "Deaths", "Monetary.LossUSD")]
+asias$cluster_id <- as.integer(as.character(asias$cluster_id))
+data_for_clustering <-asias[, c("cluster_id", "Deaths", "Monetary.LossUSD")]
 
 scaled_data <- scale(data_for_clustering)
 
 set.seed(123) 
-clara_output <- clara(scaled_data, k = 5, samples = 500)
+clara_output <- clara(scaled_data, k = 4, samples = 500)
 colors <- rainbow(length(unique(clara_output$clustering)))
 
 scaled_data_with_clusters <- cbind(scaled_data, Cluster = clara_output$clustering)

@@ -13,22 +13,6 @@ knitr::opts_chunk$set(
 )
 ```
 ## AFRICA
-```{r}
-setwd("D:/Post graduation/Semester 1/Data Analysis/Coursework/Group 18")
-```
-
-#Libraries
-```{r}
-library(dplyr)
-library(tidyr) 
-library(ggplot2) 
-library(randomForest)
-library(car) 
-library(glmnet) 
-library(caret) 
-library(cluster)
-```
-
 Raw Data Reading
 ```{r}
 tanzania<- read.csv("tanzania.csv",header=TRUE,na.strings=c(""))
@@ -1032,13 +1016,13 @@ zambia_c$Country <- "Zambia"
 uganda_c$Country <- "Uganda"
 
 africas <- rbind(tanzania_c,tunisia_c, senegal_c, zambia_c, uganda_c)
-
-data_for_clustering <-africa[, c("DataCards", "Deaths", "Monetary.LossUSD")]
+africas$cluster_id <- as.integer(as.character(africas$cluster_id))
+data_for_clustering <-africas[, c("cluster_id", "Deaths", "Monetary.LossUSD")]
 
 scaled_data <- scale(data_for_clustering)
 
 set.seed(123) 
-clara_output <- clara(scaled_data, k = 5, samples = 500)
+clara_output <- clara(scaled_data, k = 4, samples = 500)
 colors <- rainbow(length(unique(clara_output$clustering)))
 
 scaled_data_with_clusters <- cbind(scaled_data, Cluster = clara_output$clustering)
